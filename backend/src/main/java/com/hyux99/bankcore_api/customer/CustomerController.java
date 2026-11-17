@@ -1,10 +1,16 @@
 
 package com.hyux99.bankcore_api.customer;
 
+import com.hyux99.bankcore_api.customer.dto.CustomerRequest;
+import com.hyux99.bankcore_api.customer.dto.CustomerResponse;
+
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
 import org.springframework.http.ResponseEntity;
-import java.util.Optional;
+
+
+import jakarta.validation.Valid;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/customers")
@@ -16,54 +22,53 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
+    // Crear un cliente
     @PostMapping
-    public Customer createCustomer(@RequestBody Customer customer) {
-        return customerService.createCustomer(customer);
+    public ResponseEntity<CustomerResponse> createCustomer(
+            @Valid @RequestBody CustomerRequest request) {
+
+        CustomerResponse customer = customerService.createCustomer(request);
+
+        return ResponseEntity.status(201).body(customer);
     }
 
+    // Obtener todos los clientes
     @GetMapping
-    public List<Customer> getAllCustomers() {
+    public List<CustomerResponse> getAllCustomers() {
         return customerService.getAllCustomers();
     }
 
+    // Obtener un cliente por ID
     @GetMapping("/{id}")
-    public ResponseEntity<Customer> getCustomerById(@PathVariable Long id) {
+    public ResponseEntity<CustomerResponse> getCustomerById(
+            @PathVariable Long id) {
 
-        Optional<Customer> customer = customerService.getCustomerById(id);
+        CustomerResponse customer = customerService.getCustomerById(id);
 
-        if (customer.isPresent()) {
-            return ResponseEntity.ok(customer.get());
-        }
-
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(customer);
     }
 
+    // Actualizar un cliente
     @PutMapping("/{id}")
-    public ResponseEntity<Customer> updateCustomer(
+    public ResponseEntity<CustomerResponse> updateCustomer(
             @PathVariable Long id,
-            @RequestBody Customer customerDetails) {
+            @Valid @RequestBody CustomerRequest request) {
 
-        Optional<Customer> updatedCustomer =
-                customerService.updateCustomer(id, customerDetails);
+        CustomerResponse updatedCustomer =
+                customerService.updateCustomer(id, request);
 
-        if (updatedCustomer.isPresent()) {
-            return ResponseEntity.ok(updatedCustomer.get());
-        }
-
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(updatedCustomer);
     }
 
-    
+    // Eliminar un cliente
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
 
-        boolean deleted = customerService.deleteCustomer(id);
+        customerService.deleteCustomer(id);
 
-        if (deleted) {
-            return ResponseEntity.noContent().build();
-        }
-
-        return ResponseEntity.notFound().build();
+        return ResponseEntity.noContent().build();
     }
 }
+
+
 

@@ -1,9 +1,15 @@
 
 package com.hyux99.bankcore_api.customer;
 
+
+import com.hyux99.bankcore_api.customer.dto.CustomerRequest;
+import com.hyux99.bankcore_api.customer.dto.CustomerResponse;
+import com.hyux99.bankcore_api.exception.DuplicateResourceException;
+import com.hyux99.bankcore_api.exception.ResourceNotFoundException;
+
 import org.springframework.stereotype.Service;
+
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class CustomerService {
@@ -14,46 +20,101 @@ public class CustomerService {
         this.customerRepository = customerRepository;
     }
 
-    public Customer createCustomer(Customer customer) {
-        return customerRepository.save(customer);
-    }
-
-    public List<Customer> getAllCustomers() {
-        return customerRepository.findAll();
-    }
-    
-    public Optional<Customer> getCustomerById(Long id) {
-        return customerRepository.findById(id);
+    private CustomerResponse toResponse(Customer customer) {
+        return new CustomerResponse(
+                customer.getId(),
+                customer.getFirstName(),
+                customer.getLastName(),
+                customer.getDocumentNumber(),
+                customer.getEmail()
+        );
     }
 
     
-    public Optional<Customer> updateCustomer(Long id, Customer customerDetails) {
+    public CustomerResponse createCustomer(CustomerRequest request) {
 
-        Optional<Customer> existingCustomer = customerRepository.findById(id);
-
-        if (existingCustomer.isEmpty()) {
-            return Optional.empty();
+        if (customerRepository.existsByEmail(request.getEmail())) {
+            throw new DuplicateResourceException(
+                    "A customer with this email already exists"
+            );
         }
 
-        Customer customer = existingCustomer.get();
+        if (customerRepository.existsByDocumentNumber(request.getDocumentNumber())) {
+            throw new DuplicateResourceException(
+                    "A customer with this document number already exists"
+            );
+        }
 
-        customer.setFirstName(customerDetails.getFirstName());
-        customer.setLastName(customerDetails.getLastName());
-        customer.setDocumentNumber(customerDetails.getDocumentNumber());
-        customer.setEmail(customerDetails.getEmail());
+        Customer customer = new Customer();
 
-        return Optional.of(customerRepository.save(customer));
+        customer.setFirstName(request.getFirstName());
+        customer.setLastName(request.getLastName());
+        customer.setDocumentNumber(request.getDocumentNumber());
+        customer.setEmail(request.getEmail());
+
+        Customer savedCustomer = customerRepository.save(customer);
+
+        return toResponse(savedCustomer);
+    }
+
+
+    public List<CustomerResponse> getAllCustomers() {
+        return customerRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    public CustomerResponse getCustomerById(Long id) {
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Customer not found with id: " + id
+                ));
+
+        return toResponse(customer);
     }
 
     
-    public boolean deleteCustomer(Long id) {
+    public CustomerResponse updateCustomer(Long id, CustomerRequest request) {
 
-        if (!customerRepository.existsById(id)) {
-            return false;
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Customer not found with id: " + id
+                ));
+
+        if (customerRepository.existsByEmailAndIdNot(request.getEmail(), id)) {
+            throw new DuplicateResourceException(
+                    "A customer with this email already exists"
+            );
         }
 
-        customerRepository.deleteById(id);
+        if (customerRepository.existsByDocumentNumberAndIdNot(
+                request.getDocumentNumber(), id)) {
 
-        return true;
+            throw new DuplicateResourceException(
+                    "A customer with this document number already exists"
+            );
+        }
+
+        customer.setFirstName(request.getFirstName());
+        customer.setLastName(request.getLastName());
+        customer.setDocumentNumber(request.getDocumentNumber());
+        customer.setEmail(request.getEmail());
+
+        Customer updatedCustomer = customerRepository.save(customer);
+
+        return toResponse(updatedCustomer);
+    }
+
+
+    public void deleteCustomer(Long id) {
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Customer not found with id: " + id
+                ));
+
+        customerRepository.delete(customer);
     }
 }
+
+
